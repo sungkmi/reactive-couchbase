@@ -1,5 +1,6 @@
 *.class
 *.log
+*.sc
 
 # sbt specific
 .cache/
@@ -11,7 +12,9 @@ lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
+activator*
 
 # Scala-IDE specific
+.idea
 .scala_dependencies
 .worksheet
