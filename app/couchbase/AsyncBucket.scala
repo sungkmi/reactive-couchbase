@@ -9,10 +9,9 @@ import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-trait AsyncClient {
+trait AsyncBucket {
 
   def client: CouchbaseClient
-
   /**
    * Transforms the OperationFuture to Scala Future.
    * @param op the function which returns the OperationFuture
@@ -20,7 +19,7 @@ trait AsyncClient {
    * @tparam T
    * @return
    */
-  def future[U <% T, T](op: => OperationFuture[U]): Future[T] = {
+  protected def future[U <% T, T](op: => OperationFuture[U]): Future[T] = {
     val promise = Promise[T]
     Try(op) match {
       case Success(f) =>

@@ -1,5 +1,4 @@
-import com.couchbase.client.CouchbaseClient
-import couchbase.{CouchbaseClientManager, JsonClient}
+import couchbase.JsonBucketManager
 import org.joda.time.DateTime
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -10,7 +9,7 @@ import play.api.test.FakeApplication
 
 import scala.language.implicitConversions
 
-class JsonClientSpec
+class JsonBucketSpec
   extends PlaySpec
   with OneAppPerSuite
   with ScalaFutures
@@ -21,11 +20,9 @@ class JsonClientSpec
       additionalConfiguration = Map("couchbase.password" -> "test123")
     )
 
-  lazy val ClientManager = new CouchbaseClientManager {}
+  lazy val Buckets = new JsonBucketManager()
 
-  lazy val Client = new JsonClient {
-    def client: CouchbaseClient = ClientManager.get("test")
-  }
+  def Bucket = Buckets.get("test")
 
   case class Document(title: String,
                       contents: String,
@@ -41,7 +38,7 @@ class JsonClientSpec
 
   "JsonClient" must {
     "create a JSON document" in {
-      whenReady(Client.createJson(testKey, testDoc)) {
+      whenReady(Bucket.createJson(testKey, testDoc)) {
         result =>
           result must not be(None)
       }
@@ -49,7 +46,7 @@ class JsonClientSpec
 
     "update a JSON document" in {
       val updated = testDoc.copy(contents = "Test Contents Updated")
-      whenReady(Client.updateJson(testKey, updated)) {
+      whenReady(Bucket.updateJson(testKey, updated)) {
         result =>
           result.asOpt[Document] must not be(None)
           val doc = result.as[Document]
@@ -59,7 +56,7 @@ class JsonClientSpec
     }
 
     "read a JSON document" in {
-      whenReady(Client.readJson(testKey)) {
+      whenReady(Bucket.readJson(testKey)) {
         result =>
           result.asOpt[Document] must not be(None)
           val doc = result.as[Document]
@@ -69,7 +66,7 @@ class JsonClientSpec
     }
 
     "delete a JSON document" in {
-      whenReady(Client.delete(testKey)) {
+      whenReady(Bucket.delete(testKey)) {
         r =>
           r === true
       }
@@ -77,8 +74,8 @@ class JsonClientSpec
   }
 
   override protected def afterAll(): Unit = {
-    Client.client.flush().get()
-    ClientManager.shutdown()
+    Bucket.client.flush().get()
+    Buckets.shutdown()
     super.afterAll()
   }
 }

@@ -1,5 +1,6 @@
 package couchbase
 
+import com.couchbase.client.CouchbaseClient
 import com.couchbase.client.internal.{HttpCompletionListener, HttpFuture}
 import com.couchbase.client.protocol.views.{Query, View, ViewResponse}
 import couchbase.CouchbaseExceptions.{CASReadException, ReadException}
@@ -9,7 +10,7 @@ import play.api.libs.json.{JsValue, Json}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-trait JsonClient extends AsyncClient {
+class JsonBucket(val client: CouchbaseClient) extends AsyncBucket {
 
   def createJson(key: String,
                  json: JsValue,

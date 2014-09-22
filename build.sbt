@@ -12,6 +12,8 @@ scalaVersion := "2.11.1"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
 
+crossScalaVersions ++= Seq("2.10.4", "2.11.2")
+
 libraryDependencies ++= Seq(
   "com.couchbase.client" % "couchbase-client" % "1.4.+",
   "org.scalatestplus" %% "play" % "1.1.+" % "test"

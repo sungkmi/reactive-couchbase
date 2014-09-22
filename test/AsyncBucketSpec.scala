@@ -1,6 +1,5 @@
-import com.couchbase.client.CouchbaseClient
 import couchbase.CouchbaseExceptions.{DeleteException, ReadException}
-import couchbase.{AsyncClient, CouchbaseClientManager}
+import couchbase.JsonBucketManager
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
@@ -8,7 +7,7 @@ import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.test.FakeApplication
 
-class AsyncClientSpec
+class AsyncBucketSpec
   extends PlaySpec
   with OneAppPerSuite
   with ScalaFutures
@@ -19,18 +18,16 @@ class AsyncClientSpec
       additionalConfiguration = Map("couchbase.password" -> "test123")
     )
 
-  lazy val ClientManager = new CouchbaseClientManager {}
+  lazy val Buckets = new JsonBucketManager()
 
-  lazy val Client = new AsyncClient {
-    def client: CouchbaseClient = ClientManager.get("test")
-  }
+  def Bucket = Buckets.get("test")
 
   val testKey = "u::0001"
   val testDoc = "User Information 1"
 
   "AsyncClient" must {
     "create a document" in {
-      whenReady(Client.create(testKey, testDoc)) {
+      whenReady(Bucket.create(testKey, testDoc)) {
         r =>
           r mustBe a[String]
           r === testDoc
@@ -38,7 +35,7 @@ class AsyncClientSpec
     }
 
     "read a document." in {
-      whenReady(Client.read(testKey)) {
+      whenReady(Bucket.read(testKey)) {
         r =>
           r mustBe a[String]
           r === "User Information 1 is updated"
@@ -49,14 +46,14 @@ class AsyncClientSpec
 
   "throw a ReadException when non-existent doc is being read." in {
     val key = "invalid"
-    whenReady(Client.read(key).failed) {
+    whenReady(Bucket.read(key).failed) {
       t =>
         t mustBe a[ReadException]
     }
   }
 
   "delete a document." in {
-    whenReady(Client.delete(testKey)) {
+    whenReady(Bucket.delete(testKey)) {
       r =>
         r === true
     }
@@ -64,7 +61,7 @@ class AsyncClientSpec
 
   "throw a DeleteException when non-existent doc is being deleted." in {
     val key = "invalid"
-    whenReady(Client.delete(key).failed) {
+    whenReady(Bucket.delete(key).failed) {
       t =>
         t mustBe a[DeleteException]
     }
@@ -76,10 +73,10 @@ class AsyncClientSpec
     for {
       (k, v) <- keys zip docs
     } yield {
-      Client.create(k, v)
+      Bucket.create(k, v)
     }
 
-    whenReady(Client.readBulk(keys)) {
+    whenReady(Bucket.readBulk(keys)) {
       m =>
         Logger.debug("Printing the read documents...")
         m foreach { case (k, v) => Logger.debug(f"$k%15s : $v%s")}
@@ -93,10 +90,10 @@ class AsyncClientSpec
     for {
       (k, v) <- keys zip docs
     } yield {
-      Client.create(k, v)
+      Bucket.create(k, v)
     }
 
-    whenReady(Client.readBulk(keys)) {
+    whenReady(Bucket.readBulk(keys)) {
       m =>
         Logger.debug("Printing the read documents...")
         m foreach { case (k, v) => Logger.debug(f"$k%15s : $v%s")}
@@ -105,10 +102,10 @@ class AsyncClientSpec
   }
   "increase a counter" in {
     val counterKey = "u::counter1"
-    whenReady(Client.incr(counterKey, 1, 1000)) {
+    whenReady(Bucket.incr(counterKey, 1, 1000)) {
       c =>
         c === 1000L
-        whenReady(Client.incr(counterKey, 1)) {
+        whenReady(Bucket.incr(counterKey, 1)) {
           c =>
             c === 1001L
         }
@@ -117,10 +114,10 @@ class AsyncClientSpec
 
   "decrease a counter" in {
     val counterKey = "u::counter2"
-    whenReady(Client.decr(counterKey, 1, 0)) {
+    whenReady(Bucket.decr(counterKey, 1, 0)) {
       c =>
         c === 0L
-        whenReady(Client.decr(counterKey, 1)) {
+        whenReady(Bucket.decr(counterKey, 1)) {
           c =>
             c === -1L
         }
@@ -129,8 +126,8 @@ class AsyncClientSpec
 
 
   override protected def afterAll(): Unit = {
-    Client.client.flush().get()
-    ClientManager.shutdown()
+    Bucket.client.flush().get()
+    Buckets.shutdown()
     super.afterAll()
 
   }

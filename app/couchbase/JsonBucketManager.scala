@@ -9,11 +9,11 @@ import play.api.Play.current
 
 import scala.collection.JavaConversions._
 
-trait CouchbaseClientManager {
+class JsonBucketManager {
   /**
    * Holds the Couchbase client.
    */
-  val clients = new ConcurrentHashMap[String, CouchbaseClient]()
+  val buckets = new ConcurrentHashMap[String, JsonBucket]()
 
   val servers: java.util.List[URI] = {
     val defaultPools: java.util.List[String] = List("http://localhost:8091/pools")
@@ -31,27 +31,29 @@ trait CouchbaseClientManager {
 
 
   /**
-   * Returns a Couchbase client for the given bucket name.
+   * Returns a JsonBucket for the given name.
    * @param name the bucket name
    * @return the Couchbase client
    */
-  def get(name: String): CouchbaseClient = {
-    if (!clients.containsKey(name)) {
-      clients.putIfAbsent(name, new CouchbaseClient(servers, name, password))
+  def get(name: String): JsonBucket = {
+    if (!buckets.containsKey(name)) {
+      val client = new CouchbaseClient(servers, name, password)
+      buckets.putIfAbsent(name, new JsonBucket(client))
       Logger.info(s"Creating a new CouchbaseClient for $name...")
     }
-    clients.get(name)
+    buckets.get(name)
   }
 
   /**
-   * Shuts down all the clients.
+   * Shuts down all the underlying clients and removes the bucket.
    */
   def shutdown(): Unit = {
-    clients.foreach {
+    buckets.foreach {
       case (b, c) =>
-        c.shutdown(60L, TimeUnit.SECONDS)
+        c.client.shutdown(60L, TimeUnit.SECONDS)
         Logger.info(s"Shutting down the client to the bucket($b)...")
     }
-    clients.clear()
+    buckets.clear()
   }
+
 }
