@@ -4,12 +4,12 @@ import java.net.URI
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 
 import com.couchbase.client.CouchbaseClient
-import play.api.{Logger, Play}
 import play.api.Play.current
+import play.api.{Logger, Play}
 
 import scala.collection.JavaConversions._
 
-class JsonBucketManager {
+trait JsonBucketManager {
   /**
    * Holds the Couchbase client.
    */

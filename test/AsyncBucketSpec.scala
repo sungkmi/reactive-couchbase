@@ -18,7 +18,7 @@ class AsyncBucketSpec
       additionalConfiguration = Map("couchbase.password" -> "test123")
     )
 
-  lazy val Buckets = new JsonBucketManager()
+  lazy val Buckets = new JsonBucketManager {}
 
   def Bucket = Buckets.get("test")
 
