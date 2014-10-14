@@ -8,8 +8,9 @@ import play.api.Play.current
 import play.api.{Logger, Play}
 
 import scala.collection.JavaConversions._
+import scala.util.Try
 
-trait JsonBucketManager {
+class JsonBucketManager {
   /**
    * Holds the Couchbase client.
    */
@@ -35,7 +36,7 @@ trait JsonBucketManager {
    * @param name the bucket name
    * @return the Couchbase client
    */
-  def get(name: String): JsonBucket = {
+  def get(name: String): Try[JsonBucket] = Try {
     if (!buckets.containsKey(name)) {
       val client = new CouchbaseClient(servers, name, password)
       buckets.putIfAbsent(name, new JsonBucket(client))

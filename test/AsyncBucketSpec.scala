@@ -20,7 +20,7 @@ class AsyncBucketSpec
 
   lazy val Buckets = new JsonBucketManager {}
 
-  def Bucket = Buckets.get("test")
+  def Bucket = Buckets.get("test").get
 
   val testKey = "u::0001"
   val testDoc = "User Information 1"

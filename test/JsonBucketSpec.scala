@@ -22,7 +22,7 @@ class JsonBucketSpec
 
   lazy val Buckets = new JsonBucketManager {}
 
-  def Bucket = Buckets.get("test")
+  def Bucket = Buckets.get("test").get
 
   case class Document(title: String,
                       contents: String,
