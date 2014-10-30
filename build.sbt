@@ -1,8 +1,6 @@
 name := """reactive-couchbase"""
 
-version := "1.0-SNAPSHOT"
-
-version := "0.1-SNAPSHOT"
+version := "0.2-SNAPSHOT"
 
 organization := "com.manaolabs"
 
@@ -15,8 +13,13 @@ scalacOptions ++= Seq("-feature", "-deprecation")
 crossScalaVersions ++= Seq("2.10.4", "2.11.2")
 
 libraryDependencies ++= Seq(
-  "com.couchbase.client" % "couchbase-client" % "1.4.+",
-  "org.scalatestplus" %% "play" % "1.1.+" % "test"
+  "com.couchbase.client" % "java-client" % "2.0.+",
+  "com.google.inject" % "guice" % "4.0-beta5",
+  "io.reactivex" % "rxjava" % "1.0.0-rc+",
+  "io.reactivex" %% "rxscala" % "0.22+",
+  "net.codingwell" %% "scala-guice" % "4.0.0+",
+  "org.scalatest" %% "scalatest" % "2.2+" % "test",
+  "org.scalatestplus" %% "play" % "1.+" % "test"
 )
 
 publishTo := {
@@ -25,3 +28,5 @@ publishTo := {
   else
     Some(Resolver.file("releases", Path.userHome / "repository" / "releases" asFile))
 }
+
+scalariformSettings
