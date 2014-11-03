@@ -1,7 +1,7 @@
 package couchbase
 
 import com.couchbase.client.core.CouchbaseException
-import com.couchbase.client.java.document.{ JsonLongDocument, JsonStringDocument }
+import com.couchbase.client.java.document.{ Document, JsonLongDocument, JsonStringDocument }
 import com.couchbase.client.java.error.{ CASMismatchException, DocumentDoesNotExistException }
 import com.couchbase.client.java.view._
 import com.couchbase.client.java.{ AsyncBucket, PersistTo, ReplicateTo }
@@ -10,43 +10,48 @@ import rx.lang.scala.JavaConversions.toScalaObservable
 import rx.lang.scala.Observable
 
 import scala.concurrent.{ Future, Promise }
+import scala.reflect.ClassTag
 import scala.util.Try
 
+/**
+ * Scala wrapper of the Couchbase java client.
+ * @param bucket [[AsyncBucket]]
+ */
 class AsyncClient(val bucket: AsyncBucket) {
 
   /**
-   * Converts the RxScala Observable to Future.
-   * @param op the operation returning the RxScala Observable.
-   * @return the Future
+   * Converts the [[rx.lang.scala.Observable]] to [[scala.concurrent.Future]]
+   * @param op the operating which returns the [[rx.lang.scala.Observable]]
+   * @tparam A the type of the [[rx.lang.scala.Observable]]
+   * @return the future of type [[A]]
    */
-  protected def future(op: => Observable[JsonStringDocument]): Future[JsonStringDocument] = {
-    val promise = Promise[JsonStringDocument]
-    op
-      .orElse(JsonStringDocument.empty())
+  protected def future[A <: Document[_]](op: => Observable[A]): Future[A] = {
+    val promise = Promise[A]()
+    op.filter(_.id() != null)
       .subscribe(
-        n => {
-          if (n.id() != null)
-            promise.success(n)
-          else
-            promise.failure(new DocumentDoesNotExistException())
-        },
-        e => promise.failure(e)
+        n => promise.success(n),
+        e => promise.failure(e),
+        () => if (!promise.isCompleted) promise.failure(new DocumentDoesNotExistException())
       )
     promise.future
   }
 
   /**
-   * Converts the list of Observables to a Future holding the list of the results.
-   * @param ids the list of document ids'
-   * @param op the operation
-   * @return
+   * Aggregates the result of the operation which returns [[rx.lang.scala.Observable]]
+   * and converts the aggregated result to [[scala.concurrent.Future]].
+   * @param docs the sequence of the document which will be processed by the function specified.
+   * @param op the function which will process the elements of the document sequence
+   * @tparam A the type of the document
+   * @return the list of the resulting documents in [[scala.concurrent.Future]]
+   *         The list is sorted by the ids of the documents.
    */
-  protected def future(ids: Array[String],
-    op: String => Observable[JsonStringDocument]): Future[List[JsonStringDocument]] = {
-    val promise = Promise[List[JsonStringDocument]]
+  protected def future[A <: Document[_]](
+    docs: Seq[A],
+    op: A => Observable[A]): Future[List[A]] = {
+    val promise = Promise[List[A]]()
     Observable
-      .from(ids)
-      .flatMap(id => op(id))
+      .from(docs)
+      .flatMap(doc => op(doc))
       .retry
       .toList
       .subscribe(
@@ -58,73 +63,68 @@ class AsyncClient(val bucket: AsyncBucket) {
   }
 
   /**
-   * Creates a document asynchronously.
-   * If a document exist already with the given key, the call will fail.
-   * @param id the key of the document
-   * @param content the document content
-   * @param expiry the expiration time of the document. The default value 0 means no expiration.
-   * @param persistTo Couchbase persistence option.
-   * @param replicateTo Couchbase replication option.
-   * @return the created document
+   * Creates a document and returns the newly created document.
+   * @param document the document
+   * @param persistTo the Couchbase persistence option
+   * @param replicateTo the Couchbase replication option
+   * @tparam A the type of the document.
+   * @return If the document is created successfully, it returns the newly the [[Future]] of the created document.
+   *         If there's an error, it returns the failed future.
    */
-  def create(
-    id: String,
-    content: String,
-    expiry: Int = 0,
+  def create[A <: Document[_]](
+    document: A,
     persistTo: PersistTo = PersistTo.NONE,
-    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[JsonStringDocument] = {
-    val doc = JsonStringDocument.create(id, content, expiry)
+    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[A] = {
     future {
-      bucket.insert(doc, persistTo, replicateTo)
+      bucket.insert(document, persistTo, replicateTo)
     }
   }
 
   /**
-   * Reads the specified document.
-   * @param id the document id
-   * @return If the document exist for the id, it returns [[JsonStringDocument]].
-   *         If the document does not exist for the id,
-   *         it returns [[com.couchbase.client.java.error.DocumentDoesNotExistException]].
+   * Reads a document.
+   * @param document a document instance holding the id of the document to read:
+   *                 e.g. JsonDocument.create(id)
+   * @tparam A the type of the document.
+   * @return If the document is read successfully, it returns the future of the document.
+   *         If there's an error, it returns the failed future.
    */
-  def read(id: String): Future[JsonStringDocument] = {
+  def read[A <: Document[_]](document: A): Future[A] = {
     future {
-      bucket.get(id, classOf[JsonStringDocument])
+      bucket.get(document.id(), document.getClass)
     }
   }
 
   /**
-   * Reads the specified documents.
-   * @param ids the sequence of ids
-   * @return the list of the JsonStringDocument with the specified ids.
-   *         The non-existent document is not included in the list.
+   * Reads the multiple documents.
+   * @param docs the sequence of the document instances holding the id and the type.
+   * @tparam A the type of the document
+   * @return It returns the list of the documents which are read successfully.
+   *         If there's no document found, it returns an empty list.
    */
-  def read(ids: Seq[String]): Future[List[JsonStringDocument]] = {
-    future(ids.toSet.toArray, bucket.get(_, classOf[JsonStringDocument]))
+  def read[A <: Document[_]](docs: Seq[A]): Future[List[A]] = {
+    future(docs, (doc: A) => bucket.get[A](doc))
   }
 
   /**
-   * Updates a document asynchronously.
-   * If a document does not exist yet with the given key, the call will fail.
-   * @param id the document id
-   * @param content the updated content of the document
-   * @param expiry the expiration time of the document. The default value 0 means no expiration.
-   * @param persistTo Couchbase persistence option
-   * @param replicateTo Couchbase replication option
-   * @return the updated document
+   * Updates the existing document with the provided document using CAS mechanism.
+   * The document to be updated must exist already.
+   * @param document the updated document replacing the existing document.
+   * @param persistTo the Couchbase persistence option
+   * @param replicateTo the Couchbase replication option
+   * @tparam A the type of the document.
+   * @return If the document is updated successfully, it returns the future of the updated document.
+   *         If there's an error, it returns the failed future.
    */
-  def update(
-    id: String,
-    expiry: Int = 0,
+  def update[A <: Document[_]](
+    document: A,
     persistTo: PersistTo = PersistTo.NONE,
-    replicateTo: ReplicateTo = ReplicateTo.NONE)(update: String => String): Future[JsonStringDocument] = {
+    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[A] = {
     import scala.concurrent.duration._
     future {
-      Observable.defer(bucket.get(id, classOf[JsonStringDocument]))
+      Observable
+        .defer(bucket.get[A](document))
         .flatMap(
-          n => {
-            val doc = JsonStringDocument.create(n.id(), expiry, update(n.content()), n.cas())
-            bucket.replace(doc, persistTo, replicateTo)
-          })
+          n => bucket.replace(document, persistTo, replicateTo))
         .retryWhen(
           _.flatMap(
             _ match {
@@ -135,54 +135,49 @@ class AsyncClient(val bucket: AsyncBucket) {
   }
 
   /**
-   * Updates the existing document or creates a new document if the document does not exist at the given id.
-   * @param id the document id
-   * @param content the document content
-   * @param expiry the expiration time of the document. The default value 0 means no expiration.
-   * @param persistTo Couchbase persistence option
-   * @param replicateTo Couchbase replication option
-   * @return the updated document or the created document if the document did not exist before.
+   * Overwrites the existing document or creates a new document if the document does not exist yet.
+   * @param document the document to replace the existing document or the new document to be created.
+   * @param persistTo the Couchbase persistence option
+   * @param replicateTo the Couchbase replication option
+   * @tparam A the type of the document.
+   * @return If everything goes well, it returns the future of the document.
+   *         If there's an error, it returns the failed future.
    */
-  def upsert(
-    id: String,
-    content: String,
-    expiry: Int = 0,
+  def upsert[A <: Document[_]](
+    document: A,
     persistTo: PersistTo = PersistTo.NONE,
-    replicateTo: ReplicateTo = ReplicateTo.NONE) = {
+    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[A] = {
     future {
-      val doc = JsonStringDocument.create(id, expiry, content)
-      bucket.upsert(doc, persistTo, replicateTo)
+      bucket.upsert(document, persistTo, replicateTo)
     }
   }
 
   /**
-   * Replaces the existing document with the given content.
-   * @param id the document id
-   * @param content the new content
-   * @param expiry the expiration time of the document. The default value 0 means no expiration.
-   * @param persistTo Couchbase persistence option
-   * @param replicateTo Couchbase replication option
-   * @return the updated document
+   * Overwrites the existing document.
+   * @param document the document to replace the existing document
+   * @param persistTo the Couchbase persistence option
+   * @param replicateTo the Couchbase replication option
+   * @tparam A the type of the document.
+   * @return If the document is replaces successfully, it returns the future of the updated document.
+   *         If the document does not exist or something goes wrong, it returns the failed future.
    */
-  def replace(
-    id: String,
-    content: String,
-    expiry: Int = 0,
+  def replace[A <: Document[_]](
+    document: A,
     persistTo: PersistTo = PersistTo.NONE,
-    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[JsonStringDocument] = {
+    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[A] = {
     future {
-      val doc = JsonStringDocument.create(id, expiry, content)
-      bucket.replace(doc, persistTo, replicateTo)
+      bucket.replace(document, persistTo, replicateTo)
     }
   }
 
   /**
    * Deletes the specified documents.
-   * @param ids the document ids
-   * @return the list of the deleted Document
+   * @param docs the sequence of documents holding the ids.
+   * @tparam A the type of the [[Document]]
+   * @return the deleted documents
    */
-  def delete(ids: String*): Future[List[JsonStringDocument]] = {
-    future(ids.toArray, bucket.remove(_, classOf[JsonStringDocument]))
+  def delete[A <: Document[_]](docs: A*) = {
+    future(docs, (doc: A) => bucket.remove[A](doc))
   }
 
   /**
@@ -198,7 +193,7 @@ class AsyncClient(val bucket: AsyncBucket) {
     delta: Long = 1,
     initial: Long = 1,
     expiry: Int = 0): Future[Long] = {
-    val promise = Promise[Long]
+    val promise = Promise[Long]()
     val observable: Observable[JsonLongDocument] = bucket.counter(id, delta, initial, expiry)
     observable
       .subscribe(
@@ -212,15 +207,16 @@ class AsyncClient(val bucket: AsyncBucket) {
     promise.future
   }
 
-  def query(
+  def query[A <: Document[_]: ClassTag](
     design: String,
     view: String,
-    viewQuery: ViewQuery): Future[List[JsonStringDocument]] = {
-    val promise = Promise[List[JsonStringDocument]]
+    viewQuery: ViewQuery,
+    target: Class[A])(implicit ev: ClassTag[A]): Future[List[A]] = {
+    val promise = Promise[List[A]]
     val observable: Observable[AsyncViewResult] = bucket.query(viewQuery)
     observable
       .flatMap(_.rows())
-      .flatMap(_.document(classOf[JsonStringDocument]))
+      .flatMap(_.document(target))
       .toList
       .subscribe(
         n => promise.success(n),

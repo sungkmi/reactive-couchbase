@@ -36,28 +36,28 @@ class AsyncClientBasicSpec
 
   "AsyncClient" must {
     "create a new document and return the created document when everything goes well." in {
-      whenReady(client.create(testId1, testContent1)) { doc =>
+      whenReady(client.create(JsonStringDocument.create(testId1, testContent1))) { doc =>
         doc.id() === testId1
         doc.content() === testContent1
       }
     }
 
     "not allow the creation of a document when a document already exists with the same id." in {
-      val result = client.create(testId1, testContent1)
+      val result = client.create(JsonStringDocument.create(testId1, testContent1))
       whenReady(result.failed) { e =>
         e mustBe a[DocumentAlreadyExistsException]
       }
     }
 
     "read a document and return the read document." in {
-      whenReady(client.read(testId1)) { doc =>
+      whenReady(client.read(JsonStringDocument.create(testId1))) { doc =>
         doc.id() === testId1
         doc.content() === testContent1
       }
     }
 
     "return a failed future when the document does not exist for the given id." in {
-      val result = client.read("invalid")
+      val result = client.read(JsonStringDocument.create("invalid"))
       whenReady(result.failed) { e =>
         e mustBe a[DocumentDoesNotExistException]
       }
@@ -65,9 +65,9 @@ class AsyncClientBasicSpec
 
     "read multiple documents" in {
       val result: Future[Map[String, String]] = for {
-        doc2 <- client.create(testId2, testContent2)
-        doc3 <- client.create(testId3, testContent3)
-        list <- client.read(Seq(testId1, testId2, testId3))
+        doc2 <- client.create(JsonStringDocument.create(testId2, testContent2))
+        doc3 <- client.create(JsonStringDocument.create(testId3, testContent3))
+        list <- client.read(Seq(testId1, testId2, testId3).map(JsonStringDocument.create(_)))
       } yield {
         list.map(d => d.id() -> d.content()).toMap
       }
@@ -78,21 +78,21 @@ class AsyncClientBasicSpec
     }
 
     "return an empty list when the documents with the specified keys don't exist." in {
-      val result = client.read(Seq("invalid1", "invalid2", "invalid3"))
+      val result = client.read(Seq("invalid1", "invalid2", "invalid3").map(JsonStringDocument.create(_)))
       whenReady(result) { l =>
         l mustBe empty
       }
     }
 
     "filter the duplicated keys when reading multiple documents." in {
-      val result = client.read(Seq(testId1, testId1, testId2, testId2))
+      val result = client.read(Seq(testId1, testId1, testId2, testId2).map(JsonStringDocument.create(_)))
       whenReady(result) { docs =>
         docs.size === 2
       }
     }
 
     "update the document" in {
-      val result = client.update(testId2)(_ => "updated")
+      val result = client.update(JsonStringDocument.create(testId2, "updated"))
       whenReady(result) { doc =>
         doc.id() === testId2
         doc.content() === "updated"
@@ -100,35 +100,35 @@ class AsyncClientBasicSpec
     }
 
     "return a failed future when the id of the board to be updated is invalid." in {
-      val result = client.update("invalid")(_ => "invalid")
+      val result = client.update(JsonStringDocument.create("invalid", "invalid"))
       whenReady(result.failed) { e =>
         e mustBe a[DocumentDoesNotExistException]
       }
     }
 
     "replace the document." in {
-      val result = client.replace(testId3, "replaced")
+      val result = client.replace(JsonStringDocument.create(testId3, "replaced"))
       whenReady(result) { doc =>
         doc.content() === "replaced"
       }
     }
 
     "return a failed future when the id of the document to be replaced is invalid." in {
-      val result = client.replace("invalid", "invalid")
+      val result = client.replace(JsonStringDocument.create("invalid", "invalid"))
       whenReady(result.failed) { e =>
         e mustBe a[DocumentDoesNotExistException]
       }
     }
 
     "delete the specified file." in {
-      val result = client.delete(testId1, testId2, testId3)
+      val result = client.delete(Seq(testId1, testId2, testId3).map(JsonStringDocument.create(_)): _*)
       whenReady(result) { docs =>
         docs.size === 3
       }
     }
 
     "ignore the wrong id when deleting." in {
-      val result = client.delete("invalid")
+      val result = client.delete(JsonStringDocument.create("invalid"))
       whenReady(result) { docs =>
         docs.size === 0
         docs.isEmpty === true

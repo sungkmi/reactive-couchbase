@@ -1,3 +1,4 @@
+import com.couchbase.client.java.document.JsonStringDocument
 import couchbase.AsyncClient._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -50,37 +51,26 @@ class AsyncClientJSONSpec
   "AsyncClient" must {
     "create a JSON document" in {
       val content = Json.stringify(Json.toJson(testUser1))
-      whenReady(client.create(testUser1.id, content)) { doc =>
+      val doc = JsonStringDocument.create(testUser1.id, content)
+      whenReady(client.create(doc)) { doc =>
         doc.toJson.as[User] === testUser1
       }
     }
 
     "read a JSON document" in {
-      whenReady(client.read(testUser1.id)) { doc =>
+      whenReady(client.read(JsonStringDocument.create(testUser1.id))) { doc =>
         doc.toJson.as[User] === testUser1
       }
     }
 
     "update a JSON document" in {
       val updatedUrl = "avatar updated"
-      val result = client.update(testUser1.id) { str =>
-        val u = Json.parse(str).as[User](User.format)
-        val updated = u.copy(avaterUrl = Some(updatedUrl))
-        Json.stringify(Json.toJson(updated))
-      }
+      val updatedUser = testUser1.copy(avaterUrl = Some(updatedUrl))
+      val updatedDoc = JsonStringDocument.create(updatedUser.id, Json.stringify(Json.toJson(updatedUser)))
+      val result = client.update(updatedDoc)
       whenReady(result) { doc =>
-        val u = doc.toJson.as[User](User.format)
-        u.avaterUrl === updatedUrl
-      }
-    }
-
-    "throw a failed future if updating the JSON content fails." in {
-      val result = client.update(testUser1.id) { str =>
-        throw new RuntimeException("failed to transform to JSON")
-        "invalid"
-      }
-      whenReady(result.failed) { e =>
-        e mustBe a[RuntimeException]
+        val u: User = doc.toJson.as[User]
+        u.avaterUrl.get === updatedUrl
       }
     }
 
