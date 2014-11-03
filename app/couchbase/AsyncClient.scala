@@ -11,7 +11,7 @@ import rx.lang.scala.Observable
 
 import scala.concurrent.{ Future, Promise }
 import scala.reflect.ClassTag
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 /**
  * Scala wrapper of the Couchbase java client.
@@ -228,26 +228,3 @@ class AsyncClient(val bucket: AsyncBucket) {
   }
 
 }
-
-object AsyncClient {
-
-  /**
-   * Helper class to facilitate the conversion from JsonStringDocument to Scala values.
-   * @param from JsonStringDocument
-   */
-  class RichJsonStringDocument(val from: JsonStringDocument) {
-    def toKV: Try[(String, JsValue)] = Try {
-      (from.id(), Json.parse(from.content()))
-    }
-
-    def toJson: JsValue = Json.parse(from.content())
-
-    def toTry: Try[JsValue] = Try(Json.parse(from.content()))
-
-    def toFuture: Future[JsValue] = Future.fromTry(Try(Json.parse(from.content())))
-  }
-
-  implicit def doc2RichDoc(from: JsonStringDocument) = new RichJsonStringDocument(from)
-
-}
-

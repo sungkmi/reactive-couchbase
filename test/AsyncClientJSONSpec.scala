@@ -1,5 +1,5 @@
 import com.couchbase.client.java.document.JsonStringDocument
-import couchbase.AsyncClient._
+import couchbase.JsonStringDocumentHelper._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.{ OneAppPerSuite, PlaySpec }
