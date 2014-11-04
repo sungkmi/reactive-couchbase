@@ -6,20 +6,20 @@ organization := "com.manaolabs"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.11.1"
+scalaVersion := "2.11.4"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
 
-crossScalaVersions ++= Seq("2.10.4", "2.11.2")
+crossScalaVersions ++= Seq("2.10.4", "2.11.4")
 
 libraryDependencies ++= Seq(
-  "com.couchbase.client" % "java-client" % "2.0.+",
+  "com.couchbase.client" % "java-client" % "2.0.0",
   "com.google.inject" % "guice" % "4.0-beta5",
-  "io.reactivex" % "rxjava" % "1.0.0-rc+",
-  "io.reactivex" %% "rxscala" % "0.22+",
-  "net.codingwell" %% "scala-guice" % "4.0.0+",
-  "org.scalatest" %% "scalatest" % "2.2+" % "test",
-  "org.scalatestplus" %% "play" % "1.+" % "test"
+  "io.reactivex" % "rxjava" % "1.0.0-rc.9",
+  "io.reactivex" %% "rxscala" % "0.22.0",
+  "net.codingwell" %% "scala-guice" % "4.0.0-beta4",
+  "org.scalatest" %% "scalatest" % "2.2.2" % "test",
+  "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
 publishTo := {

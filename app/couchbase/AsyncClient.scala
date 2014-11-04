@@ -15,7 +15,7 @@ import scala.util.{ Failure, Success, Try }
 
 /**
  * Scala wrapper of the Couchbase java client.
- * @param bucket [[AsyncBucket]]
+ * @param bucket [[com.couchbase.client.java.AsyncBucket]]
  */
 class AsyncClient(val bucket: AsyncBucket) {
 
@@ -68,7 +68,7 @@ class AsyncClient(val bucket: AsyncBucket) {
    * @param persistTo the Couchbase persistence option
    * @param replicateTo the Couchbase replication option
    * @tparam A the type of the document.
-   * @return If the document is created successfully, it returns the newly the [[Future]] of the created document.
+   * @return If the document is created successfully, it returns the newly the [[scala.concurrent.Future]] of the created document.
    *         If there's an error, it returns the failed future.
    */
   def create[A <: Document[_]](
@@ -173,7 +173,7 @@ class AsyncClient(val bucket: AsyncBucket) {
   /**
    * Deletes the specified documents.
    * @param docs the sequence of documents holding the ids.
-   * @tparam A the type of the [[Document]]
+   * @tparam A the type of the [[com.couchbase.client.java.document.Document]]
    * @return the deleted documents
    */
   def delete[A <: Document[_]](docs: A*) = {
