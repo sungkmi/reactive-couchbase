@@ -1,31 +1,17 @@
 import com.couchbase.client.java.document.JsonStringDocument
 import com.couchbase.client.java.error.{ DocumentAlreadyExistsException, DocumentDoesNotExistException }
+import couchbase.{ AsyncClientManager, AsyncClient, BucketInfo, TestHelper }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.play.{ OneAppPerSuite, PlaySpec }
-import play.api.test.FakeApplication
+import org.scalatestplus.play.PlaySpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class AsyncClientBasicSpec
     extends PlaySpec
-    with OneAppPerSuite
     with ScalaFutures
-    with BeforeAndAfterAll {
-
-  implicit override lazy val app: FakeApplication = FakeApplication(
-    additionalConfiguration = Map("couchbase.password" -> "test123")
-  )
-
-  lazy val Clients = new TestClients()
-  lazy val client = Clients.getClient("test").getOrElse(throw new RuntimeException("Failed to get the client"))
-
-  override protected def afterAll(): Unit = {
-    Clients.flush("test")
-    Clients.shutdown()
-    super.afterAll()
-  }
+    with TestClientManager {
 
   val testId1 = "test::0001"
   val testContent1 = "Test document 0001"

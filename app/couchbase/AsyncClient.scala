@@ -207,11 +207,11 @@ class AsyncClient(val bucket: AsyncBucket) {
     promise.future
   }
 
-  def query[A <: Document[_]: ClassTag](
+  def query[A <: Document[_]](
     design: String,
     view: String,
     viewQuery: ViewQuery,
-    target: Class[A])(implicit ev: ClassTag[A]): Future[List[A]] = {
+    target: Class[A])(implicit tag: ClassTag[A]): Future[List[A]] = {
     val promise = Promise[List[A]]
     val observable: Observable[AsyncViewResult] = bucket.query(viewQuery)
     observable
@@ -226,5 +226,4 @@ class AsyncClient(val bucket: AsyncBucket) {
       )
     promise.future
   }
-
 }

@@ -1,4 +1,5 @@
 import com.couchbase.client.java.document.JsonStringDocument
+import couchbase.{ AsyncClient, BucketInfo, TestHelper, AsyncClientManager }
 import couchbase.JsonStringDocumentHelper._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -25,22 +26,8 @@ object User {
 
 class AsyncClientJSONSpec
     extends PlaySpec
-    with OneAppPerSuite
     with ScalaFutures
-    with BeforeAndAfterAll {
-
-  implicit override lazy val app: FakeApplication = FakeApplication(
-    additionalConfiguration = Map("couchbase.password" -> "test123")
-  )
-
-  lazy val Clients = new TestClients()
-  lazy val client = Clients.getClient("test").getOrElse(throw new RuntimeException("Failed to get the client"))
-
-  override protected def afterAll(): Unit = {
-    Clients.flush("test")
-    Clients.shutdown()
-    super.afterAll()
-  }
+    with TestClientManager {
 
   val logInfo1 = LogInfo("1000", "facebook")
   val logInfo2 = LogInfo("1000", "google")
