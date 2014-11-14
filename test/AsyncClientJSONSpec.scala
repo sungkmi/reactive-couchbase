@@ -1,11 +1,8 @@
-import com.couchbase.client.java.document.JsonStringDocument
-import couchbase.{ AsyncClient, BucketInfo, TestHelper, AsyncClientManager }
-import couchbase.JsonStringDocumentHelper._
-import org.scalatest.BeforeAndAfterAll
+import com.couchbase.client.java.document.RawJsonDocument
+import couchbase.RawJsonDocumentHelper._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.play.{ OneAppPerSuite, PlaySpec }
+import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
-import play.api.test.FakeApplication
 
 case class LogInfo(providerId: String, providerKey: String)
 
@@ -38,14 +35,14 @@ class AsyncClientJSONSpec
   "AsyncClient" must {
     "create a JSON document" in {
       val content = Json.stringify(Json.toJson(testUser1))
-      val doc = JsonStringDocument.create(testUser1.id, content)
+      val doc = RawJsonDocument.create(testUser1.id, content)
       whenReady(client.create(doc)) { doc =>
         doc.toJson.as[User] === testUser1
       }
     }
 
     "read a JSON document" in {
-      whenReady(client.read(JsonStringDocument.create(testUser1.id))) { doc =>
+      whenReady(client.read(RawJsonDocument.create(testUser1.id))) { doc =>
         doc.toJson.as[User] === testUser1
       }
     }
@@ -53,7 +50,7 @@ class AsyncClientJSONSpec
     "update a JSON document" in {
       val updatedUrl = "avatar updated"
       val updatedUser = testUser1.copy(avaterUrl = Some(updatedUrl))
-      val updatedDoc = JsonStringDocument.create(updatedUser.id, Json.stringify(Json.toJson(updatedUser)))
+      val updatedDoc = RawJsonDocument.create(updatedUser.id, Json.stringify(Json.toJson(updatedUser)))
       val result = client.update(updatedDoc)
       whenReady(result) { doc =>
         val u: User = doc.toJson.as[User]

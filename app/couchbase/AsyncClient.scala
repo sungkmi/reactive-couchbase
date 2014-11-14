@@ -67,7 +67,7 @@ class AsyncClient(val bucket: AsyncBucket) {
    * @param document the document
    * @param persistTo the Couchbase persistence option
    * @param replicateTo the Couchbase replication option
-   * @tparam A the type of the document.
+   * @tparam A the type of the document
    * @return If the document is created successfully, it returns the newly the [[scala.concurrent.Future]] of the created document.
    *         If there's an error, it returns the failed future.
    */
@@ -111,7 +111,7 @@ class AsyncClient(val bucket: AsyncBucket) {
    * @param document the updated document replacing the existing document.
    * @param persistTo the Couchbase persistence option
    * @param replicateTo the Couchbase replication option
-   * @tparam A the type of the document.
+   * @tparam A the type of the document
    * @return If the document is updated successfully, it returns the future of the updated document.
    *         If there's an error, it returns the failed future.
    */
@@ -139,7 +139,7 @@ class AsyncClient(val bucket: AsyncBucket) {
    * @param document the document to replace the existing document or the new document to be created.
    * @param persistTo the Couchbase persistence option
    * @param replicateTo the Couchbase replication option
-   * @tparam A the type of the document.
+   * @tparam A the type of the document
    * @return If everything goes well, it returns the future of the document.
    *         If there's an error, it returns the failed future.
    */
@@ -157,7 +157,7 @@ class AsyncClient(val bucket: AsyncBucket) {
    * @param document the document to replace the existing document
    * @param persistTo the Couchbase persistence option
    * @param replicateTo the Couchbase replication option
-   * @tparam A the type of the document.
+   * @tparam A the type of the document
    * @return If the document is replaces successfully, it returns the future of the updated document.
    *         If the document does not exist or something goes wrong, it returns the failed future.
    */
@@ -173,11 +173,27 @@ class AsyncClient(val bucket: AsyncBucket) {
   /**
    * Deletes the specified documents.
    * @param docs the sequence of documents holding the ids.
-   * @tparam A the type of the [[com.couchbase.client.java.document.Document]]
+   * @tparam A the type of the document
    * @return the deleted documents
    */
   def delete[A <: Document[_]](docs: A*) = {
     future(docs, (doc: A) => bucket.remove[A](doc))
+  }
+
+  /**
+   * Renews the expiration of the document.
+   * @param doc the document holding the id of the document to be renewed.
+   * @tparam A the type of the document
+   * @return true is the touch was successful otherwise false
+   */
+  def touch[A <: Document[_]](doc: A) = {
+    val promise = Promise[Boolean]
+    val observable: Observable[java.lang.Boolean] = bucket.touch(doc)
+    observable.subscribe(
+      promise.success(_),
+      promise.failure(_)
+    )
+    promise.future
   }
 
   /**

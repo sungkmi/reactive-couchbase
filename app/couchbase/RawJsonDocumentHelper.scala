@@ -1,19 +1,19 @@
 package couchbase
 
-import com.couchbase.client.java.document.JsonStringDocument
-import play.api.libs.json.{ Json, JsValue }
+import com.couchbase.client.java.document.RawJsonDocument
+import play.api.libs.json.{ JsValue, Json }
 
-import scala.concurrent.{ Promise, Future }
+import scala.concurrent.{ Future, Promise }
 import scala.language.implicitConversions
 import scala.util.{ Failure, Success, Try }
 
-object JsonStringDocumentHelper {
+object RawJsonDocumentHelper {
 
   /**
    * Helper class to facilitate the conversion from JsonStringDocument to Scala values.
-   * @param from JsonStringDocument
+   * @param from RawJsonDocument
    */
-  class RichJsonStringDocument(val from: JsonStringDocument) {
+  class RichJsonStringDocument(val from: RawJsonDocument) {
     def toKV: Try[(String, JsValue)] = Try {
       (from.id(), Json.parse(from.content()))
     }
@@ -32,7 +32,7 @@ object JsonStringDocumentHelper {
     }
   }
 
-  implicit def doc2RichDoc(from: JsonStringDocument) = new RichJsonStringDocument(from)
+  implicit def doc2RichDoc(from: RawJsonDocument) = new RichJsonStringDocument(from)
 
 }
 

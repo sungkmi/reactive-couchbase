@@ -13,7 +13,7 @@ scalacOptions ++= Seq("-feature", "-deprecation")
 crossScalaVersions ++= Seq("2.10.4", "2.11.4")
 
 libraryDependencies ++= Seq(
-  "com.couchbase.client" % "java-client" % "2.0.0",
+  "com.couchbase.client" % "java-client" % "2.0.1",
   "com.google.inject" % "guice" % "4.0-beta5",
   "io.reactivex" % "rxjava" % "1.0.0-rc.+",
   "io.reactivex" %% "rxscala" % "0.22.0",
