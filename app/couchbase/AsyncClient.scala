@@ -1,17 +1,15 @@
 package couchbase
 
 import com.couchbase.client.core.CouchbaseException
-import com.couchbase.client.java.document.{ Document, JsonLongDocument, JsonStringDocument }
+import com.couchbase.client.java.document.{ Document, JsonLongDocument }
 import com.couchbase.client.java.error.{ CASMismatchException, DocumentDoesNotExistException }
 import com.couchbase.client.java.view._
 import com.couchbase.client.java.{ AsyncBucket, PersistTo, ReplicateTo }
-import play.api.libs.json.{ JsValue, Json }
 import rx.lang.scala.JavaConversions.toScalaObservable
 import rx.lang.scala.Observable
 
 import scala.concurrent.{ Future, Promise }
 import scala.reflect.ClassTag
-import scala.util.{ Failure, Success, Try }
 
 /**
  * Scala wrapper of the Couchbase java client.
@@ -73,10 +71,23 @@ class AsyncClient(val bucket: AsyncBucket) {
    */
   def create[A <: Document[_]](
     document: A,
-    persistTo: PersistTo = PersistTo.NONE,
-    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[A] = {
+    persistTo: PersistTo,
+    replicateTo: ReplicateTo): Future[A] = {
     future {
       bucket.insert(document, persistTo, replicateTo)
+    }
+  }
+
+  /**
+   * Creates a document and returns the newly created document.
+   * @param document the document
+   * @tparam A the type of the document
+   * @return If the document is created successfully, it returns the newly the [[scala.concurrent.Future]] of the created document.
+   *         If there's an error, it returns the failed future.
+   */
+  def create[A <: Document[_]](document: A): Future[A] = {
+    future {
+      bucket.insert(document)
     }
   }
 
@@ -117,14 +128,38 @@ class AsyncClient(val bucket: AsyncBucket) {
    */
   def update[A <: Document[_]](
     document: A,
-    persistTo: PersistTo = PersistTo.NONE,
-    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[A] = {
+    persistTo: PersistTo,
+    replicateTo: ReplicateTo): Future[A] = {
     import scala.concurrent.duration._
     future {
       Observable
         .defer(bucket.get[A](document))
         .flatMap(
           n => bucket.replace(document, persistTo, replicateTo))
+        .retryWhen(
+          _.flatMap(
+            _ match {
+              case _: CASMismatchException => Observable.timer(Duration(500, MILLISECONDS))
+              case t => Observable.error(t)
+            }))
+    }
+  }
+
+  /**
+   * Updates the existing document with the provided document using CAS mechanism.
+   * The document to be updated must exist already.
+   * @param document the updated document replacing the existing document.
+   * @tparam A the type of the document
+   * @return If the document is updated successfully, it returns the future of the updated document.
+   *         If there's an error, it returns the failed future.
+   */
+  def update[A <: Document[_]](document: A): Future[A] = {
+    import scala.concurrent.duration._
+    future {
+      Observable
+        .defer(bucket.get[A](document))
+        .flatMap(
+          n => bucket.replace(document))
         .retryWhen(
           _.flatMap(
             _ match {
@@ -145,10 +180,23 @@ class AsyncClient(val bucket: AsyncBucket) {
    */
   def upsert[A <: Document[_]](
     document: A,
-    persistTo: PersistTo = PersistTo.NONE,
-    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[A] = {
+    persistTo: PersistTo,
+    replicateTo: ReplicateTo): Future[A] = {
     future {
       bucket.upsert(document, persistTo, replicateTo)
+    }
+  }
+
+  /**
+   * Overwrites the existing document or creates a new document if the document does not exist yet.
+   * @param document the document to replace the existing document or the new document to be created.
+   * @tparam A the type of the document
+   * @return If everything goes well, it returns the future of the document.
+   *         If there's an error, it returns the failed future.
+   */
+  def upsert[A <: Document[_]](document: A): Future[A] = {
+    future {
+      bucket.upsert(document)
     }
   }
 
@@ -163,10 +211,23 @@ class AsyncClient(val bucket: AsyncBucket) {
    */
   def replace[A <: Document[_]](
     document: A,
-    persistTo: PersistTo = PersistTo.NONE,
-    replicateTo: ReplicateTo = ReplicateTo.NONE): Future[A] = {
+    persistTo: PersistTo,
+    replicateTo: ReplicateTo): Future[A] = {
     future {
       bucket.replace(document, persistTo, replicateTo)
+    }
+  }
+
+  /**
+   * Overwrites the existing document.
+   * @param document the document to replace the existing document
+   * @tparam A the type of the document
+   * @return If the document is replaces successfully, it returns the future of the updated document.
+   *         If the document does not exist or something goes wrong, it returns the failed future.
+   */
+  def replace[A <: Document[_]](document: A): Future[A] = {
+    future {
+      bucket.replace(document)
     }
   }
 

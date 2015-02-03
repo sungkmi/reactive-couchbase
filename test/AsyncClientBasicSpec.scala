@@ -1,5 +1,6 @@
 import com.couchbase.client.java.document.StringDocument
 import com.couchbase.client.java.error.{ DocumentAlreadyExistsException, DocumentDoesNotExistException }
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.PlaySpec
 
@@ -8,6 +9,7 @@ import scala.concurrent.Future
 
 class AsyncClientBasicSpec
     extends PlaySpec
+    with BeforeAndAfterAll
     with ScalaFutures
     with TestClientManager {
 
