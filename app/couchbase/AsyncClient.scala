@@ -40,18 +40,18 @@ class AsyncClient(val bucket: AsyncBucket) {
    * @param docs the sequence of the document which will be processed by the function specified.
    * @param op the function which will process the elements of the document sequence
    * @tparam A the type of the document
-   * @return the list of the resulting documents in [[scala.concurrent.Future]]
-   *         The list is sorted by the ids of the documents.
+   * @return the sequence of the resulting documents in [[scala.concurrent.Future]]
+   *         The sequence is sorted by the ids of the documents.
    */
   protected def future[A <: Document[_]](
     docs: Seq[A],
-    op: A => Observable[A]): Future[List[A]] = {
-    val promise = Promise[List[A]]()
+    op: A => Observable[A]): Future[Seq[A]] = {
+    val promise = Promise[Seq[A]]()
     Observable
       .from(docs)
       .flatMap(doc => op(doc))
       .retry
-      .toList
+      .toSeq
       .subscribe(
         n => promise.success(n.sortBy(_.id())),
         e => promise.failure(e),
@@ -112,7 +112,7 @@ class AsyncClient(val bucket: AsyncBucket) {
    * @return It returns the list of the documents which are read successfully.
    *         If there's no document found, it returns an empty list.
    */
-  def read[A <: Document[_]](docs: Seq[A]): Future[List[A]] = {
+  def read[A <: Document[_]](docs: Seq[A]): Future[Seq[A]] = {
     future(docs, (doc: A) => bucket.get[A](doc))
   }
 
@@ -237,7 +237,7 @@ class AsyncClient(val bucket: AsyncBucket) {
    * @tparam A the type of the document
    * @return the deleted documents
    */
-  def delete[A <: Document[_]](docs: A*) = {
+  def delete[A <: Document[_]](docs: A*): Future[Seq[A]] = {
     future(docs, (doc: A) => bucket.remove[A](doc))
   }
 
