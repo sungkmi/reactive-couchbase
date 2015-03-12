@@ -32,8 +32,8 @@ class MemcacheSpec
     }
 
     "delete a document." in {
-      whenReady(cache.delete(StringDocument.create("test"))) { docs =>
-        docs.length === 1
+      whenReady(cache.delete("test")) { id =>
+        id === "test"
       }
     }
   }

@@ -1,4 +1,4 @@
-import com.couchbase.client.java.document.StringDocument
+import com.couchbase.client.java.document.{ JsonStringDocument, StringDocument }
 import com.couchbase.client.java.error.{ DocumentAlreadyExistsException, DocumentDoesNotExistException }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -19,6 +19,8 @@ class AsyncClientBasicSpec
   val testContent2 = "Test document 0002"
   val testId3 = "test::0003"
   val testContent3 = "Test document 0003"
+
+  val testCounterID = "test::counter"
 
   "AsyncClient" must {
     "create a new document and return the created document when everything goes well." in {
@@ -107,19 +109,33 @@ class AsyncClientBasicSpec
     }
 
     "delete the specified file." in {
-      val result = client.delete(Seq(testId1, testId2, testId3).map(StringDocument.create(_)): _*)
+      val result = client.delete(Seq(testId1, "invalid", testId2, testId3))
       whenReady(result) { docs =>
         docs.size === 3
       }
     }
 
-    "ignore the wrong id when deleting." in {
-      val result = client.delete(StringDocument.create("invalid"))
-      whenReady(result) { docs =>
-        docs.size === 0
-        docs.isEmpty === true
+    "increase the counter." in {
+      val result = client.counter(testCounterID, 1, 1)
+      whenReady(result) { counter =>
+        counter === 1L
       }
     }
+
+    "read the counter." in {
+      val result = client.readCounter(testCounterID)
+      whenReady(result) { counter =>
+        counter === 1L
+      }
+    }
+
+    "read the counter which has never been accessed." in {
+      val result = client.readCounter(s"${testCounterID}2")
+      whenReady(result) { counter =>
+        counter === 1L
+      }
+    }
+
   }
 
 }

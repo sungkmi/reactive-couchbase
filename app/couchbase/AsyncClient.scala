@@ -1,7 +1,7 @@
 package couchbase
 
 import com.couchbase.client.core.CouchbaseException
-import com.couchbase.client.java.document.{ Document, JsonLongDocument }
+import com.couchbase.client.java.document.{ Document, JsonDocument, JsonLongDocument }
 import com.couchbase.client.java.error.{ CASMismatchException, DocumentDoesNotExistException }
 import com.couchbase.client.java.view._
 import com.couchbase.client.java.{ AsyncBucket, PersistTo, ReplicateTo }
@@ -30,32 +30,6 @@ class AsyncClient(val bucket: AsyncBucket) {
         n => promise.success(n),
         e => promise.failure(e),
         () => if (!promise.isCompleted) promise.failure(new DocumentDoesNotExistException())
-      )
-    promise.future
-  }
-
-  /**
-   * Aggregates the result of the operation which returns [[rx.lang.scala.Observable]]
-   * and converts the aggregated result to [[scala.concurrent.Future]].
-   * @param docs the sequence of the document which will be processed by the function specified.
-   * @param op the function which will process the elements of the document sequence
-   * @tparam A the type of the document
-   * @return the sequence of the resulting documents in [[scala.concurrent.Future]]
-   *         The sequence is sorted by the ids of the documents.
-   */
-  protected def future[A <: Document[_]](
-    docs: Seq[A],
-    op: A => Observable[A]): Future[Seq[A]] = {
-    val promise = Promise[Seq[A]]()
-    Observable
-      .from(docs)
-      .flatMap(doc => op(doc))
-      .retry
-      .toSeq
-      .subscribe(
-        n => promise.success(n.sortBy(_.id())),
-        e => promise.failure(e),
-        () => if (!promise.isCompleted) promise.success(Nil)
       )
     promise.future
   }
@@ -113,7 +87,15 @@ class AsyncClient(val bucket: AsyncBucket) {
    *         If there's no document found, it returns an empty list.
    */
   def read[A <: Document[_]](docs: Seq[A]): Future[Seq[A]] = {
-    future(docs, (doc: A) => bucket.get[A](doc))
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val results: Seq[Future[Option[A]]] = docs map { d =>
+      read(d)
+        .map(Some(_))
+        .recover {
+          case _: DocumentDoesNotExistException => None
+        }
+    }
+    Future.sequence(results) map (_.filter(_.isDefined).map(_.get))
   }
 
   /**
@@ -233,12 +215,23 @@ class AsyncClient(val bucket: AsyncBucket) {
 
   /**
    * Deletes the specified documents.
-   * @param docs the sequence of documents holding the ids.
-   * @tparam A the type of the document
-   * @return the deleted documents
+   * @param id the ID of the document to be deleted
+   * @return the [[JsonDocument]] which contains the id and cas value of the deleted document
    */
-  def delete[A <: Document[_]](docs: A*): Future[Seq[A]] = {
-    future(docs, (doc: A) => bucket.remove[A](doc))
+  def delete(id: String): Future[JsonDocument] = {
+    future(bucket.remove(id))
+  }
+
+  def delete(ids: Seq[String]): Future[Seq[JsonDocument]] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val results = ids map { id =>
+      delete(id)
+        .map(Some(_))
+        .recover {
+          case t: DocumentDoesNotExistException => None
+        }
+    }
+    Future.sequence(results).map(_.filter(_.isDefined).map(_.get))
   }
 
   /**
@@ -284,6 +277,25 @@ class AsyncClient(val bucket: AsyncBucket) {
     promise.future
   }
 
+  /**
+   * Returns the current value of the counter specified by the ID.
+   * @param id the counter ID
+   * @return the current counter value
+   */
+  def readCounter(id: String): Future[Long] = {
+    counter(id, 0)
+  }
+
+  /**
+   * Returns the query results.
+   * @param design the design document name
+   * @param view the view name
+   * @param viewQuery the query to be executed
+   * @param target the class type of the [[Document]]'s subclass
+   * @param tag implicit class tag
+   * @tparam A the subclass of the [[Document]]
+   * @return
+   */
   def query[A <: Document[_]](
     design: String,
     view: String,
