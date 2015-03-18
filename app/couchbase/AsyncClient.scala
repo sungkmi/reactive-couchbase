@@ -259,7 +259,7 @@ class AsyncClient(val bucket: AsyncBucket) {
   def counter(
     id: String,
     delta: Long = 1,
-    initial: Long = 1,
+    initial: Long = 0,
     expiry: Int = 0): Future[Long] = {
     val promise = Promise[Long]()
     val observable: Observable[JsonLongDocument] = bucket.counter(id, delta, initial, expiry)

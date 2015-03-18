@@ -116,7 +116,7 @@ class AsyncClientBasicSpec
     }
 
     "increase the counter." in {
-      val result = client.counter(testCounterID, 1, 1)
+      val result = client.counter(testCounterID, delta = 1, initial = 0)
       whenReady(result) { counter =>
         counter === 1L
       }
