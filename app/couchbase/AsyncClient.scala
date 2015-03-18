@@ -88,14 +88,13 @@ class AsyncClient(val bucket: AsyncBucket) {
    */
   def read[A <: Document[_]](docs: Seq[A]): Future[Seq[A]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val results: Seq[Future[Option[A]]] = docs map { d =>
-      read(d)
+    Future.traverse(docs) { doc =>
+      read(doc)
         .map(Some(_))
         .recover {
           case _: DocumentDoesNotExistException => None
         }
-    }
-    Future.sequence(results) map (_.filter(_.isDefined).map(_.get))
+    } map (_.filter(_.isDefined).map(_.get))
   }
 
   /**
@@ -224,14 +223,13 @@ class AsyncClient(val bucket: AsyncBucket) {
 
   def delete(ids: Seq[String]): Future[Seq[JsonDocument]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val results = ids map { id =>
+    Future.traverse(ids) { id =>
       delete(id)
         .map(Some(_))
         .recover {
-          case t: DocumentDoesNotExistException => None
+          case _: DocumentDoesNotExistException => None
         }
-    }
-    Future.sequence(results).map(_.filter(_.isDefined).map(_.get))
+    } map (_.filter(_.isDefined).map(_.get))
   }
 
   /**
