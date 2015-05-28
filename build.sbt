@@ -1,6 +1,6 @@
 name := """reactive-couchbase"""
 
-version := "0.5-SNAPSHOT"
+version := "0.6-SNAPSHOT"
 
 organization := "com.manaolabs"
 
@@ -14,10 +14,10 @@ crossScalaVersions ++= Seq("2.10.5", "2.11.6")
 
 libraryDependencies ++= Seq(
   "com.couchbase.client" % "java-client" % "2.1.+",
-  "com.google.inject" % "guice" % "4.0-beta5",
+  "com.google.inject" % "guice" % "4.0",
   "io.reactivex" %% "rxscala" % "0.24.+",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-  "org.scalatestplus" %% "play" % "1.2.0" % "test"
+  "org.scalatestplus" %% "play" % "1.4.0-M+" % "test"
 )
 
 publishTo := {
