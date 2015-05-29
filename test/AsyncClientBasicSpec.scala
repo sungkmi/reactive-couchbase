@@ -1,6 +1,5 @@
-import com.couchbase.client.java.document.{ JsonStringDocument, StringDocument }
+import com.couchbase.client.java.document.StringDocument
 import com.couchbase.client.java.error.{ DocumentAlreadyExistsException, DocumentDoesNotExistException }
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.PlaySpec
 
@@ -9,9 +8,8 @@ import scala.concurrent.Future
 
 class AsyncClientBasicSpec
     extends PlaySpec
-    with BeforeAndAfterAll
     with ScalaFutures
-    with TestClientManager {
+    with TestApplication {
 
   val testId1 = "test::0001"
   val testContent1 = "Test document 0001"
@@ -21,6 +19,8 @@ class AsyncClientBasicSpec
   val testContent3 = "Test document 0003"
 
   val testCounterID = "test::counter"
+
+  val client = manager.get("test").get
 
   "AsyncClient" must {
     "create a new document and return the created document when everything goes well." in {

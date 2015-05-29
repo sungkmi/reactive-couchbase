@@ -24,13 +24,15 @@ object User {
 class AsyncClientJSONSpec
     extends PlaySpec
     with ScalaFutures
-    with TestClientManager {
+    with TestApplication {
 
   val logInfo1 = LogInfo("1000", "facebook")
   val logInfo2 = LogInfo("1000", "google")
 
   val testUser1 = User(logInfo1.toString, logInfo1, Some("Test1"), Some("User"), None)
   val testUser2 = User(logInfo2.toString, logInfo2, Some("Test2"), Some("User"), None)
+
+  val client = manager.get("test").get
 
   "AsyncClient" must {
     "create a JSON document" in {

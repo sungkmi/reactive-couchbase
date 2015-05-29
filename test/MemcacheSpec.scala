@@ -1,13 +1,13 @@
 import com.couchbase.client.java.document.StringDocument
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.PlaySpec
 
 class MemcacheSpec
     extends PlaySpec
-    with BeforeAndAfterAll
     with ScalaFutures
-    with TestClientManager {
+    with TestApplication {
+
+  val cache = manager.get("cache").get
 
   "Memcache Client" must {
     "create a new document and return the created document." in {
