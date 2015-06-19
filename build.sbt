@@ -4,7 +4,7 @@ version := "0.6-SNAPSHOT"
 
 organization := "com.manaolabs"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+//lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.11.6"
 
