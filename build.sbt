@@ -4,11 +4,11 @@ version := "0.6-SNAPSHOT"
 
 organization := "com.manaolabs"
 
-//lazy val root = (project in file(".")).enablePlugins(PlayScala)
-
 scalaVersion := "2.11.6"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
+
+//lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 libraryDependencies ++= Seq(
   "com.couchbase.client" % "java-client" % "2.1.3",
