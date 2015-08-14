@@ -12,7 +12,7 @@ scalacOptions ++= Seq("-feature", "-deprecation")
 
 libraryDependencies ++= Seq(
   "com.couchbase.client" % "java-client" % "2.1.4",
-  "io.reactivex" % "rxjava" % "1.0.13",
+  "io.reactivex" % "rxjava" % "1.0.14",
   "io.reactivex" %% "rxscala" % "0.25.0",
   "net.codingwell" %% "scala-guice" % "4.0.0",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test",
